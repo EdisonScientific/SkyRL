@@ -52,40 +52,6 @@ class NewInferenceWorkerWrap(LayerwiseReloadWorkerMixin):
         self.device
     """
 
-    def skyrl_start_weight_update(self, is_checkpoint_format: bool = True) -> None:
-        """
-        Prepare the model for a new weight update.
-
-        For checkpoint-format weights, initializes the layerwise reload
-        machinery which moves layers to meta device and wraps weight loaders
-        to defer processing until all weights for each layer are loaded.
-
-        Must be called before any update_weights_ipc calls.
-
-        Args:
-            is_checkpoint_format: True if incoming weights are in checkpoint
-                format (need layerwise processing). False if weights are
-                already in kernel format (direct copy).
-        """
-        if getattr(self, "_skyrl_weight_update_active", False):
-            raise RuntimeError(
-                "skyrl_start_weight_update called while a weight update is "
-                "already active. Call skyrl_finish_weight_update first."
-            )
-
-        if is_checkpoint_format:
-            from vllm.config import set_current_vllm_config
-            from vllm.model_executor.model_loader.reload import (
-                initialize_layerwise_reload,
-            )
-
-            model = self.model_runner.model
-            with set_current_vllm_config(self.vllm_config), torch.device(self.device):
-                initialize_layerwise_reload(model)
-
-        self._skyrl_is_checkpoint_format = is_checkpoint_format
-        self._skyrl_weight_update_active = True
-
     def update_weights_ipc(self, update_info: dict) -> None:
         """
         Receive and load a single chunk of weights.
@@ -195,27 +161,3 @@ class NewInferenceWorkerWrap(LayerwiseReloadWorkerMixin):
             )
 
         torch.accelerator.synchronize()
-
-    def skyrl_finish_weight_update(self) -> None:
-        """
-        Finalize the current weight update.
-
-        For checkpoint-format weights, runs layerwise postprocessing
-        (quantization repacking, attention weight processing, etc.).
-        Must be called after all update_weights_ipc calls are done.
-        """
-        if not getattr(self, "_skyrl_weight_update_active", False):
-            raise RuntimeError("skyrl_start_weight_update must be called before skyrl_finish_weight_update.")
-
-        if self._skyrl_is_checkpoint_format:
-            from vllm.config import set_current_vllm_config
-            from vllm.model_executor.model_loader.reload import (
-                finalize_layerwise_reload,
-            )
-
-            model = self.model_runner.model
-            with set_current_vllm_config(self.vllm_config), torch.device(self.device):
-                finalize_layerwise_reload(model, self.model_config)
-
-        self._skyrl_weight_update_active = False
-        self._skyrl_is_checkpoint_format = True

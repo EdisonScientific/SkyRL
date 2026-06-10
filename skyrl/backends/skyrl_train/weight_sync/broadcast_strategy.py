@@ -185,8 +185,8 @@ class BroadcastWeightTransferSender(WeightTransferSender):
             for chunk in chunks:
                 yield from zip(chunk.names, chunk.tensors)
 
-        # Route via the skyrl wrap (start_weight_update + update_weights_nccl
-        # + finish_weight_update) rather than vLLM's native /update_weights so
+        # Route via the skyrl wrap (skyrl_start_weight_update + update_weights_nccl
+        # + skyrl_finish_weight_update) rather than vLLM's native /update_weights so
         # the receive is wrapped with set_current_vllm_config. Matches how
         # CUDA IPC already routes through skyrl's wrap.
         # TODO: switch back to update_named_weights once the upstream vLLM

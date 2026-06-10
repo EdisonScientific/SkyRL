@@ -37,9 +37,9 @@ vLLM worker-extension classes (loaded via `--worker-extension-cls`):
 3. `teardown_weight_receiver()` — on shutdown.
 
 **New path** (`NewInferenceWorkerWrap`):
-1. `start_weight_update(is_checkpoint_format=True)` — initializes layerwise reload (moves layers to meta device, wraps loaders).
+1. `skyrl_start_weight_update(is_checkpoint_format=True)` — initializes layerwise reload (moves layers to meta device, wraps loaders).
 2. `update_weights_chunk(update_info)` — called repeatedly. Unpacks the SkyRL packed CUDA-IPC payload, slices the contiguous buffer per param, calls `model.load_weights(weights=...)` under `set_current_vllm_config`.
-3. `finish_weight_update()` — runs `finalize_layerwise_reload` (quantization repacking, attention weight postprocessing).
+3. `skyrl_finish_weight_update()` — runs `finalize_layerwise_reload` (quantization repacking, attention weight postprocessing).
 
 ## Convention: vLLM imports
 
